@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hand Gesture Detection Demo</title>
+    <style>
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Hand Gesture Detection Demo</h1>
+
+<!-- Video player -->
+<video id="videoPlayer" width="640" height="480" controls>
+    <source src="{{ url_for('video_feed') }}" type="video/mp4">
+</video>
+
+<!-- Detected gestures section -->
+<h2>Detected Gestures:</h2>
+<ul id="gestureList">
+    <!-- Detected gestures will be added here dynamically -->
+</ul>
+
+<!-- Three.js canvas -->
+<div id="canvasContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+    // Initialize Three.js scene and camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // Create Three.js renderer and add it to the page
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvasContainer').appendChild(renderer.domElement);
+
+    // Load the glTF file
+    const loader = new THREE.GLTFLoader();
+    loader.load('path/to/your/model.glb', function (gltf) {
+        // Add the model to the scene
+        scene.add(gltf.scene);
+    });
+
+    // Set up the camera position
+    camera.position.z = 5;
+
+    // Create a cube for the 3D model
+    // const geometry = new THREE.BoxGeometry();
+    // const material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+    // const gltf.scene = new THREE.Mesh(geometry, material);
+    // scene.add(cube);
+
+    // Set up hand gesture detection socket connection
+    const socket = io.connect('http://localhost:5000');
+    socket.on('gesture', function(gestureData) {
+        // Check which gesture was detected and move the cube accordingly
+        const gesture = gestureData['name'];
+        const gestureValue = gestureData['value'];
+        if (gesture === 'SWIPE LEFT') {
+            gltf.scene.position.x -= gestureValue;
+        } else if (gesture === 'SWIPE RIGHT') {
+            gltf.scene.position.x += gestureValue;
+        } else if (gesture === 'SWIPE UP') {
+            gltf.scene.position.y += gestureValue;
+        } else if (gesture === 'SWIPE DOWN') {
+            gltf.scene.position.y -= gestureValue;
+        } else if (gesture === 'ZOOM IN') {
+            gltf.scene.scale.multiplyScalar(1 + gestureValue / 100);
+        } else if (gesture === 'ZOOM OUT') {
+            gltf.scene.scale.multiplyScalar(1 - gestureValue / 100);
+        }
+    });
+
+    // Render loop
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+</body>
+</html>
