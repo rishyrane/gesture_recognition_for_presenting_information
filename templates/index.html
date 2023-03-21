@@ -22,10 +22,10 @@
 </video>
 
 <!-- Detected gestures section -->
-<h2>Detected Gestures:</h2>
-<ul id="gestureList">
-    <!-- Detected gestures will be added here dynamically -->
-</ul>
+<h2>Detected Gesture:</h2>
+<!--TOOD: ADD the received gesture_name here-->
+<li id="gestureName">{{ gesture_name }}</li>
+
 
 <!-- Three.js canvas -->
 <div id="canvasContainer"></div>
@@ -35,6 +35,7 @@
 
 <script>
     // Initialize Three.js scene and camera
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -61,22 +62,18 @@
 
     // Set up hand gesture detection socket connection
     const socket = io.connect('http://localhost:5000');
-    socket.on('gesture', function(gestureData) {
+    //TODO not sure what to receive the socket here can you look into this?
+    socket.on('gesture_name', function(handle_gesture) {
         // Check which gesture was detected and move the cube accordingly
-        const gesture = gestureData['name'];
-        const gestureValue = gestureData['value'];
+        const gesture = handle_gesture['gesture_name'];
         if (gesture === 'SWIPE LEFT') {
-            gltf.scene.position.x -= gestureValue;
+            gltf.scene.position.x -= 0.5;
         } else if (gesture === 'SWIPE RIGHT') {
-            gltf.scene.position.x += gestureValue;
+            gltf.scene.position.x += 0.5;
         } else if (gesture === 'SWIPE UP') {
-            gltf.scene.position.y += gestureValue;
+            gltf.scene.position.y += 0.5;
         } else if (gesture === 'SWIPE DOWN') {
-            gltf.scene.position.y -= gestureValue;
-        } else if (gesture === 'ZOOM IN') {
-            gltf.scene.scale.multiplyScalar(1 + gestureValue / 100);
-        } else if (gesture === 'ZOOM OUT') {
-            gltf.scene.scale.multiplyScalar(1 - gestureValue / 100);
+            gltf.scene.position.y -= 0.5;
         }
     });
 

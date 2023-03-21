@@ -1,15 +1,22 @@
-#Import necessary libraries
+# Import necessary libraries
 from flask import Flask, render_template, Response
 import cv2
 from cvzone.HandTrackingModule import HandDetector
 import math
+from flask_socketio import SocketIO
 
-#Initialize the Flask app
+# Initialize the Flask app
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socket = SocketIO(app)
+
+# Define a global variable to store the gesture name
+gesture_name = ""
 
 camera = cv2.VideoCapture(0)
 
 def gen_frames():
+    global gesture_name  # access the global gesture_name variable
     while True:
         success, frame = camera.read()  # read the camera frame
         if not success:
@@ -27,30 +34,30 @@ def gen_frames():
             if lmList:
                 # Get the coordinates of the index and middle fingers
                 x1, y1 = lmList[8][1:]
-                x2, y2 = lmList[12][1:]
 
-                # Calculate the distance between the index and middle fingers
-                length = math.hypot(x2 - x1, y2 - y1)
-
-                # Detect gestures based on finger positions
-                if length < 40:  # if fingers are close together, it is a zoom-in gesture
-                    cv2.putText(frame, 'ZOOM IN', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                elif length > 150:  # if fingers are far apart, it is a zoom-out gesture
-                    cv2.putText(frame, 'ZOOM OUT', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                else:  # if fingers are in a horizontal position, it is a swipe gesture
-                    if x1 < 300:  # swipe left
-                        cv2.putText(frame, 'SWIPE LEFT', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    elif x1 > 500:  # swipe right
-                        cv2.putText(frame, 'SWIPE RIGHT', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    elif y1 < 200:  # swipe up
-                        cv2.putText(frame, 'SWIPE UP', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    elif y1 > 400:  # swipe down
-                        cv2.putText(frame, 'SWIPE DOWN', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                # if fingers are in a horizontal position, it is a swipe gesture
+                if x1 < 300:  # swipe left
+                    cv2.putText(frame, 'SWIPE LEFT', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    gesture_name = 'SWIPE LEFT'
+                elif x1 > 500:  # swipe right
+                    cv2.putText(frame, 'SWIPE RIGHT', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    gesture_name = 'SWIPE RIGHT'
+                elif y1 < 200:  # swipe up
+                    cv2.putText(frame, 'SWIPE UP', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    gesture_name = 'SWIPE UP'
+                elif y1 > 400:  # swipe down
+                    cv2.putText(frame, 'SWIPE DOWN', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    gesture_name = 'SWIPE DOWN'
 
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+
+@socket.on('gesture')
+def handle_gesture():
+    # Emit the "gesture" event along with the updated gesture_name value
+    socket.emit('gesture', {'gesture_name': gesture_name})
 
 @app.route('/')
 def index():
